@@ -1,42 +1,38 @@
-import { Component, OnInit } from '@angular/core';
-import {concat, interval, Observable, of, Subscription} from 'rxjs';
-import {concatMap, map, shareReplay, tap} from 'rxjs/operators';
+import {Component, OnInit, ViewEncapsulation} from '@angular/core';
+import {concat, fromEvent, interval, noop, observable, Observable, of, timer, merge, Subject, BehaviorSubject} from 'rxjs';
+import {delayWhen, filter, map, take, timeout} from 'rxjs/operators';
 import {createHttpObservable} from '../common/util';
-import {Lesson} from '../model/lesson';
-import {Course} from '../model/course';
 
 
 @Component({
-  selector: 'about',
-  templateUrl: './about.component.html',
-  styleUrls: ['./about.component.css']
+    selector: 'about',
+    templateUrl: './about.component.html',
+    styleUrls: ['./about.component.css']
 })
 export class AboutComponent implements OnInit {
 
-  constructor() { }
+    ngOnInit() {
+      const subject = new BehaviorSubject(0); // Creation of subject with default value
+      const series$ = subject.asObservable(); // Get an observable from subject
+      series$.subscribe(val => console.log('Early subs: ', val)); // Subscribe to the observable
 
-  ngOnInit() {
+      subject.next(1); // Calling methods from an Observer type
+      subject.next(2);
+      // subject.complete(); // If we call complete, late subscriptions won't get values
+
+      setTimeout(() => {
+        // This late subscriptor just will have last value emitted, on this case: 2
+        series$.subscribe(val => console.log('Late subs: ', val));
+        subject.next(3); // This will be received by early and late subscriptors
+      });
+
+    }
 
 
-  }
-
-
-
-
-  createLessonsObservable():Observable<Lesson[]> {
-    const lessons: Lesson[] = [this.createLesson()];
-    return of(lessons);
-  }
-
-  createLesson(): Lesson {
-    const lesson: Lesson = {
-      courseId: 100,
-      description: 'Description',
-      duration: '1',
-      id: 10,
-      seqNo: 1000
-    };
-    return lesson;
-  }
 }
+
+
+
+
+
 

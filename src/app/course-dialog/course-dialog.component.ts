@@ -1,30 +1,31 @@
 import {AfterViewInit, Component, ElementRef, Inject, OnInit, ViewChild, ViewEncapsulation} from '@angular/core';
-import { MAT_DIALOG_DATA, MatDialogRef } from '@angular/material/dialog';
-import {Course} from '../model/course';
-import {FormBuilder, Validators, FormGroup} from '@angular/forms';
+import { MAT_DIALOG_DATA, MatDialogRef } from "@angular/material/dialog";
+import {Course} from "../model/course";
+import {FormBuilder, Validators, FormGroup} from "@angular/forms";
 import * as moment from 'moment';
-import {fromEvent, Observable} from 'rxjs';
-import {concatMap, distinctUntilChanged, exhaustMap, filter, mergeMap} from 'rxjs/operators';
+import {fromEvent} from 'rxjs';
+import {concatMap, distinctUntilChanged, exhaustMap, filter, mergeMap, tap} from 'rxjs/operators';
 import {fromPromise} from 'rxjs/internal-compatibility';
+import {Store} from '../common/store.service';
 
 @Component({
     selector: 'course-dialog',
     templateUrl: './course-dialog.component.html',
     styleUrls: ['./course-dialog.component.css']
 })
-export class CourseDialogComponent implements OnInit, AfterViewInit {
+export class CourseDialogComponent implements AfterViewInit {
 
     form: FormGroup;
-    course: Course;
+    course:Course;
 
     @ViewChild('saveButton', { static: true }) saveButton: ElementRef;
-
-    @ViewChild('searchInput', { static: true }) searchInput: ElementRef;
+    @ViewChild('searchInput', { static: true }) searchInput : ElementRef;
 
     constructor(
         private fb: FormBuilder,
         private dialogRef: MatDialogRef<CourseDialogComponent>,
-        @Inject(MAT_DIALOG_DATA) course:Course ) {
+        @Inject(MAT_DIALOG_DATA) course:Course,
+        private store: Store) {
 
         this.course = course;
 
@@ -34,44 +35,23 @@ export class CourseDialogComponent implements OnInit, AfterViewInit {
             releasedAt: [moment(), Validators.required],
             longDescription: [course.longDescription,Validators.required]
         });
-
     }
-
-    ngOnInit() {
-      this.form.valueChanges
-        .pipe(
-          filter(() => this.form.valid), // Until valid form, we save data
-          exhaustMap(changes => this.saveCourse(changes))
-        )
-        .subscribe(); // Just need to call subscribe() method to trigger logic
-    }
-
-    saveCourse(changes): Observable<any> {
-      return fromPromise( // Convert an http Promise into a Observable
-        fetch(`/api/courses/${this.course.id}`, // This fetch (from typescript) returns a Promise
-          {
-            method: 'PUT',
-            body: JSON.stringify(changes),
-            headers: {
-              'content-type': 'application/json'
-            }
-          })
-      );
-    }
-
 
     ngAfterViewInit() {
-      fromEvent(this.saveButton.nativeElement, 'click')
-        .pipe(
-          exhaustMap(() => this.saveCourse(this.form.value))
-        )
-        .subscribe();
+
     }
 
-
+    save() {
+      this.store.saveCourse(this.course.id, this.form.value)
+        .subscribe( // Observable return value is create from backend fetch() request promise
+          () => this.close(),
+          err => console.log('Error saving course...', err)
+        );
+    }
 
     close() {
         this.dialogRef.close();
     }
+
 
 }
